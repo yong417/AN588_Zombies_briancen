@@ -1,0 +1,264 @@
+---
+title: "briancen_OriginalHomeworkCode_03"
+author: "Yongliang Cen"
+date: "2025-02-27"
+output: html_document
+---
+
+> BP: Remember the formatting guidelines!
+
+```{r}
+#Load the csv directly from Github
+df <- read.csv("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/refs/heads/master/AN588_Spring25/zombies.csv")
+
+#calculate the population mean and sd
+
+# define a function to calculate population sd
+pop_sd <- function(x) {
+  m <- mean(x)
+  sqrt(sum((x - m)^2) / length(x))
+}
+
+# create a list of variables that need to be calculated
+random_var <- c("height", "weight", "age", "zombies_killed", "years_of_education")
+
+# use for loop to calculate mean and sd for each random_var, df[[r]] is extracting the whole colmun as numeric vector so each value in the column will be called
+
+for (r in random_var) {
+  miu <- mean(df[[r]])
+  sd <- pop_sd(df[[r]])
+   cat("For", r, ",", "Population Mean =", miu, "and Population SD =", sd, "\n")
+}
+
+
+```
+
+> BP: Love that you're just loading the csv directly from github, and how you're using a for loop to run through these parameters for each of the variables. I just did each one individually, but I think your way here is probably better.
+
+# Task 2
+```{r}
+library(tidyr)
+library(ggplot2)
+
+# reshape the data frame to make long format
+df_long <- pivot_longer(df, 
+                        cols = c("height", "weight", "age", "zombies_killed", "years_of_education"),
+                        names_to = "variable",
+                        values_to = "value")
+
+# plotting each quantitative variable by gender
+
+ggplot(df_long, aes(x = gender, y = value)) +
+  geom_boxplot(fill = "pink", color = "skyblue") +
+  # facet look at the unique variables and create a "facet" aka subplot for them
+  facet_wrap(~ variable, scales = "free_y") +
+  theme_classic() +
+  labs(title = "Boxplots of Quantitative Variables by Gender",
+       x = "Gender",
+       y = "Value")
+
+```
+
+> BP: Love that you're using facet wrap to plot everything together, though the skyblue & pink color scheme is kinda straining on my eyes. Maybe consider outlining in a darker color?
+
+# Task 3: create scatterplots of height and weight in relation to age
+```{r}
+# create scatter plot for height in relation to age
+ggplot(df, aes(x = age, y = height)) +
+  geom_point(color = "hotpink", size = 1.5) +                    
+  geom_smooth(method = "lm", se = FALSE, color = "purple", size = 1) + 
+  labs(title = "Height vs. Age",
+       x = "Age",
+       y = "Height") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(color = "purple", face = "bold", size = 16),
+    axis.title = element_text(color = "hotpink", size = 14),
+    axis.text = element_text(color = "purple", size = 12),
+    panel.grid.major = element_line(color = "pink", linetype = "dotted"),
+    panel.grid.minor = element_blank()
+  )
+
+# create scatter plot for weight in relation to age 
+ggplot(df, aes(x = age, y = weight)) +
+  geom_point(color = "purple", size = 1.5) +                       
+  geom_smooth(method = "lm", se = FALSE, color = "hotpink", size = 1) + 
+  labs(title = "Weight vs. Age",
+       x = "Age",
+       y = "Weight") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(color = "hotpink", face = "bold", size = 16),
+    axis.title = element_text(color = "purple", size = 14),
+    axis.text = element_text(color = "hotpink", size = 12),
+    panel.grid.major = element_line(color = "purple", linetype = "dotted"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+>BP: Small thing, but I'm interested in your choice of colors here since pink and purple are so close and might be slightly difficult to parse for some people.
+
+Response: height and weight seems to increase with age, showing a positive correlation. However, most data points are around the age of 20 and within the age range there is a lot of fluctuation of both weight and height.
+
+#Task4: create qq plot and histogram to check distribution
+```{r}
+
+for (r in random_var) {
+ # loop over the quantitative variable to create histogram
+  print(
+    ggplot(df, aes(x = df[[r]])) +
+      geom_histogram(bins = 30, fill = "lightblue", color = "black") +
+      labs(title = paste("Histogram of", r),
+           x = r, y = "Frequency") +
+      theme_minimal()
+  )
+  
+  ## loop over the quantitative variable to create qq plot
+  print(
+    ggplot(df, aes_string(sample = df[[r]])) +
+      stat_qq(color = "blue") +
+      stat_qq_line(color = "red") +
+      labs(title = paste("Q-Q Plot of", r),
+           x = "Theoretical Quantiles", y = "Sample Quantiles") +
+      theme_minimal()
+  )
+}
+
+
+```
+Response: Height, weight and age seems to have normal distribution. Zombie kills and years of education are right skewed and they consist of discrete counting number. Thus, it suggest that the samples are from poisson distribution.
+#Task5：sample 30
+```{r}
+set.seed(888)          
+df_sample <- df[sample(nrow(df), 30, replace = FALSE), ]
+
+
+vars <- c("height", "weight", "age")
+
+for (v in vars) {
+  # Extract the data for this variable
+  x <- df_sample[[v]]
+  
+  # 1) Sample mean
+  xbar <- mean(x)
+  
+  # 2) Sample standard deviation
+  s <- sd(x)
+  
+  # Sample size
+  n <- length(x)
+  
+  # 3) Standard error
+  se <- s / sqrt(n)
+  
+  # 4) 95% confidence interval using the t-distribution
+  alpha <- 0.05
+  df_t <- n - 1
+  # Critical t-value for a two-sided 95% CI
+  t_val <- qt(1 - alpha/2, df_t)
+  ci_lower <- xbar - t_val * se
+  ci_upper <- xbar + t_val * se
+  
+  cat("Variable:", v, "\n")
+  cat("  Mean:", xbar, "\n")
+  cat("  Sample SD:", s, "\n")
+  cat("  SE:", se, "\n")
+  cat("  95% CI:", "[", ci_lower, ",", ci_upper, "]\n\n")
+}
+
+## for non normal distributed variables
+set.seed(10)
+
+# I want to bootstrap 1000 replicates
+boot_n <- 1000  # number of bootstrap replicates
+
+# create a function to get a list of sampling mean
+bootstrap_mean <- function(x, boot_n) {
+  boot_means <- replicate(boot_n, {
+    boot_sample <- sample(x, length(x), replace = TRUE)
+    mean(boot_sample)
+  })
+  return(boot_means)
+}
+
+#--------------------------------
+# Bootstrap for zombies killed
+x_zombies <- df_sample$zombies_killed
+boot_means_zombies <- bootstrap_mean(x_zombies, boot_n)
+
+# Bootstrap estimates
+boot_mean_zombies <- mean(boot_means_zombies)
+boot_se_zombies <- sd(boot_means_zombies)
+ci_zombies <- quantile(boot_means_zombies, c(0.025, 0.975))
+
+cat("Zombies Killed:\n")
+cat("  Bootstrap Mean:", boot_mean_zombies, "\n")
+cat("  Bootstrap SE:", boot_se_zombies, "\n")
+cat("  95% CI: [", ci_zombies[1], ",", ci_zombies[2], "]\n\n")
+
+#------------------------------------
+# Bootstrap for years_of_education
+x_education <- df_sample$years_of_education
+boot_means_edu <- bootstrap_mean(x_education, boot_n)
+
+# Bootstrap estimates
+boot_mean_edu <- mean(boot_means_edu)
+boot_se_edu <- sd(boot_means_edu)
+ci_edu <- quantile(boot_means_edu, c(0.025, 0.975))
+
+cat("Years of Education:\n")
+cat("  Bootstrap Mean:", boot_mean_edu, "\n")
+cat("  Bootstrap SE:", boot_se_edu, "\n")
+cat("  95% CI: [", ci_edu[1], ",", ci_edu[2], "]\n")
+
+
+```
+#Task 6:
+```{r}
+library(tidyr)
+
+vars <- c("height", "weight", "age", "zombies_killed", "years_of_education")
+
+# Number of samples to draw
+n_samples <- 100
+
+# make a data frame with five columns each corresponding to the quantitative variables and 100 rows each for one of the sample mean and name the column with the variable names
+sample_means <- data.frame(matrix(ncol = length(vars), nrow = n_samples))
+colnames(sample_means) <- vars
+
+set.seed(360)  # for reproducibility
+
+# Draw 100 samples of 30 survivors and calculate means
+for (i in 1:n_samples) {
+  sample_i <- df[sample(nrow(df), 30, replace = FALSE), ]
+  for (v in vars) {
+    sample_means[i, v] <- mean(sample_i[[v]])
+  }
+}
+
+# Calculate the overall mean and standard deviation (SD) of the sampling distribution for each variable
+sampling_result <- sapply(sample_means, function(x) c(mean = mean(x), sd = sd(x)))
+print(sampling_result)
+
+# Plot the sampling distributions using histograms:
+sample_means_long <- pivot_longer(sample_means, cols = all_of(vars),
+                                  names_to = "variable", values_to = "sample_mean")
+
+ggplot(sample_means_long, aes(x = sample_mean)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  facet_wrap(~ variable, scales = "free_x") +
+  labs(title = "Sampling Distributions of Means (n = 30)",
+       x = "Sample Mean",
+       y = "Frequency") +
+  theme_minimal()
+
+
+
+
+
+```
+response: The means, SD and SE from [5] is not far from that from [6]. However, since [5] from only one observation, it can not represent the true popultion mean, SD and SE as well as the sampling distribution. The smapling distributions for all variables are about normal distributed which is exactly what the central limit theorem tells us. Regradless of the original sample distribution, as long as the sample size is large enough, the distribution of the sample mean tends to be normal.
+
+
+> BP: Looks good! I think my main feedback is just to make sure you're following the formatting guidelines and to maybe include a bit more commenting on what each part of your code (i.e. arguments you're passing to functions etc.) is doing, especially for the last two questions which can be kind of difficult to follow along on. That said you do have them all broken up in a very legible way!
